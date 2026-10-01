@@ -2,10 +2,13 @@ package com.fc.v2.common.quartz.task;
 import cn.hutool.core.date.DateUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fc.v2.model.auto.TSysUser;
+import com.fc.v2.service.ITBcastZeroTaskService;
 import com.fc.v2.service.ITSysUserService;
+import com.fc.v2.service.bcast.ZeroRoundResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -20,6 +23,23 @@ public class V2Task {
 
 	@Autowired
     private ITSysUserService userService;
+
+	@Autowired
+	private ITBcastZeroTaskService bcastZeroTaskService;
+
+	/**
+	 * 零报告催办：系统卡着日子自跑一轮，人只看落下的结果。
+	 * Quartz 调用目标串：v2Task.zeroReportRound()
+	 */
+	public void zeroReportRound()
+	{
+		ZeroRoundResult r = bcastZeroTaskService.runOnce(new Date());
+		System.out.println("零报告催办本轮收口(" + DateUtil.now() + ")："
+				+ r.getRoundNo() + " " + r.getMessage()
+				+ "｜还欠开口=" + r.getPendingCount()
+				+ "，本轮催到=" + r.getDoneCount()
+				+ "，催不动=" + r.getFailCount());
+	}
     /**
      * 无参的任务
      */

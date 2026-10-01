@@ -37,16 +37,37 @@ public class TBcastZeroTask implements Serializable {
     @ApiModelProperty(value = "零报告催办条目代号")
     private String itemNo;
 
-    /** 该出手那一日的止点时刻 */
+    /** 所对发射台站(底册id) */
+    @TableField("site_id")
+    @JsonSerialize(using = ToStringSerializer.class)
+    @ApiModelProperty(value = "所对发射台站(底册id)")
+    private Long siteId;
+
+    /** 事由 0零报告催办 1保障期前设备核点 */
+    @TableField("biz_type")
+    @ApiModelProperty(value = "事由 0零报告催办 1保障期前设备核点")
+    private Integer bizType;
+
+    /** 应开口那一日收到哪个钟点为止(开口档,写死不许顺延) */
     @TableField("due_at")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
-    @ApiModelProperty(value = "该出手那一日的止点时刻")
+    @ApiModelProperty(value = "应开口那一日收到哪个钟点为止")
     private Date dueAt;
 
-    /** 最可提前几日开口 */
+    /** 最可提前几个工作日开口(事前唯一可调) */
     @TableField("amount")
-    @ApiModelProperty(value = "最可提前几日开口")
+    @ApiModelProperty(value = "最可提前几个工作日开口")
     private BigDecimal amount;
+
+    /** 依照哪一版稿子播发 */
+    @TableField("tpl_ver")
+    @ApiModelProperty(value = "依照哪一版稿子播发")
+    private String tplVer;
+
+    /** 值机联系人手机(空着几季没人补=催不动) */
+    @TableField("contact_phone")
+    @ApiModelProperty(value = "值机联系人手机")
+    private String contactPhone;
 
     /** 事由与所对台站的记要 */
     @TableField("content")
@@ -57,6 +78,38 @@ public class TBcastZeroTask implements Serializable {
     @TableField("status")
     @ApiModelProperty(value = "条目情形 0候催 1已催到 2催不动")
     private Integer status;
+
+    /** 催到那一刻(status=1时必须落) */
+    @TableField("done_time")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    @ApiModelProperty(value = "催到那一刻")
+    private Date doneTime;
+
+    /** 最近一次经办的轮次id */
+    @TableField("last_round_id")
+    @JsonSerialize(using = ToStringSerializer.class)
+    @ApiModelProperty(value = "最近一次经办的轮次id")
+    private Long lastRoundId;
+
+    /** 催不动:卡在哪一环 */
+    @TableField("block_stage")
+    @ApiModelProperty(value = "催不动:卡在哪一环")
+    private String blockStage;
+
+    /** 催不动:原委(日后可按原委挑一批) */
+    @TableField("block_reason")
+    @ApiModelProperty(value = "催不动:原委")
+    private String blockReason;
+
+    /** 展示用(非持久):数到开口档还剩几个工作日 */
+    @TableField(exist = false)
+    @ApiModelProperty(value = "剩余工作日(展示)")
+    private Integer remainingWorkdays;
+
+    /** 展示用(非持久):此刻开口档是否已踩过 */
+    @TableField(exist = false)
+    @ApiModelProperty(value = "是否已到档(展示)")
+    private Boolean reachedNow;
 
     /** 删除标记 0正常 1删除 */
     @TableField("del_flag")
@@ -136,6 +189,86 @@ public class TBcastZeroTask implements Serializable {
 
     public void setStatus(Integer status) {
         this.status = status;
+    }
+
+    public Long getSiteId() {
+        return siteId;
+    }
+
+    public void setSiteId(Long siteId) {
+        this.siteId = siteId;
+    }
+
+    public Integer getBizType() {
+        return bizType;
+    }
+
+    public void setBizType(Integer bizType) {
+        this.bizType = bizType;
+    }
+
+    public String getTplVer() {
+        return tplVer;
+    }
+
+    public void setTplVer(String tplVer) {
+        this.tplVer = tplVer;
+    }
+
+    public String getContactPhone() {
+        return contactPhone;
+    }
+
+    public void setContactPhone(String contactPhone) {
+        this.contactPhone = contactPhone;
+    }
+
+    public Date getDoneTime() {
+        return doneTime;
+    }
+
+    public void setDoneTime(Date doneTime) {
+        this.doneTime = doneTime;
+    }
+
+    public Long getLastRoundId() {
+        return lastRoundId;
+    }
+
+    public void setLastRoundId(Long lastRoundId) {
+        this.lastRoundId = lastRoundId;
+    }
+
+    public String getBlockStage() {
+        return blockStage;
+    }
+
+    public void setBlockStage(String blockStage) {
+        this.blockStage = blockStage;
+    }
+
+    public String getBlockReason() {
+        return blockReason;
+    }
+
+    public void setBlockReason(String blockReason) {
+        this.blockReason = blockReason;
+    }
+
+    public Integer getRemainingWorkdays() {
+        return remainingWorkdays;
+    }
+
+    public void setRemainingWorkdays(Integer remainingWorkdays) {
+        this.remainingWorkdays = remainingWorkdays;
+    }
+
+    public Boolean getReachedNow() {
+        return reachedNow;
+    }
+
+    public void setReachedNow(Boolean reachedNow) {
+        this.reachedNow = reachedNow;
     }
 
     public Integer getDelFlag() {

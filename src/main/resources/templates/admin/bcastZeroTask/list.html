@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.pollix.at/thymeleaf/shiro">
+<head>
+    <th:block th:include="include :: header('零报告催办台账')"/>
+</head>
+<body class="pear-container">
+<div class="layui-card">
+    <div class="layui-card-body">
+        <blockquote class="layui-elem-quote" style="margin-bottom:10px;">
+            系统卡着保障期日子自行推进一轮：只捞<b>开口档已踩过</b>的候催条目；剩余工作日跨夜段、国家假、省令停办不入数，保障期封盘仍计工作日但压住催办。
+            人只看落下的结果：还欠开口 / 本轮催到 / 催不动。
+        </blockquote>
+        <button shiro:hasPermission="bcast:bcastZeroTask:run" class="pear-btn pear-btn-primary pear-btn-md" id="btn-run">
+            <i class="layui-icon layui-icon-triangle-r"></i> 按此刻跑一轮
+        </button>
+        <button class="pear-btn pear-btn-md" id="btn-rounds">
+            <i class="layui-icon layui-icon-log"></i> 历轮收口
+        </button>
+        <button class="pear-btn pear-btn-md" id="btn-refresh">
+            <i class="layui-icon layui-icon-refresh"></i> 刷新
+        </button>
+    </div>
+</div>
+<div class="layui-card">
+    <div class="layui-card-body">
+        <table id="zero-table" lay-filter="zero-table"></table>
+    </div>
+</div>
+</body>
+
+<script type="text/html" id="zero-status">
+    {{# if (d.status == 0) { }}
+    <span class="layui-badge layui-bg-gray">候催</span>
+    {{# } else if (d.status == 1) { }}
+    <span class="layui-badge layui-bg-green">催到</span>
+    {{# } else if (d.status == 2) { }}
+    <span class="layui-badge">催不动</span>
+    {{# } }}
+</script>
+
+<script type="text/html" id="zero-biz">
+    {{# if (d.bizType == 1) { }}<span class="layui-badge layui-bg-blue">设备核点</span>{{# } else { }}零报告催办{{# } }}
+</script>
+
+<script type="text/html" id="zero-reached">
+    {{# if (d.status != 0) { }}
+    <span>-</span>
+    {{# } else if (d.reachedNow) { }}
+    <span class="layui-badge layui-bg-orange">已到档</span>
+    {{# } else { }}
+    <span class="layui-badge layui-bg-gray">未到档</span>
+    {{# } }}
+</script>
+
+<script type="text/html" id="zero-bar">
+    <button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="channels" title="两路送达痕迹">
+        <i class="layui-icon layui-icon-dialogue"></i>
+    </button>
+</script>
+
+<th:block th:include="include :: footer"/>
+<script>
+    layui.use(['table', 'layer', 'jquery'], function () {
+        let table = layui.table;
+        let layer = layui.layer;
+        let $ = layui.jquery;
+        let MODULE_PATH = rootPath + "/bcastZeroTask";
+
+        table.render({
+            elem: '#zero-table',
+            url: MODULE_PATH + '/list',
+            method: 'get',
+            page: true,
+            skin: 'line',
+            cols: [[
+                {field: 'itemNo', title: '条目代号', width: 180},
+                {field: 'bizType', title: '事由', width: 110, toolbar: '#zero-biz'},
+                {field: 'content', title: '事由与所对台站', minWidth: 220},
+                {field: 'dueAt', title: '开口档(止点)', width: 170},
+                {field: 'amount', title: '可提前工作日', width: 110, align: 'center'},
+                {field: 'remainingWorkdays', title: '剩余工作日', width: 100, align: 'center'},
+                {field: 'reachedNow', title: '到档', width: 90, align: 'center', toolbar: '#zero-reached'},
+                {field: 'tplVer', title: '稿子版次', width: 90, align: 'center'},
+                {field: 'contactPhone', title: '值机手机', width: 130},
+                {field: 'status', title: '情形', width: 90, align: 'center', toolbar: '#zero-status'},
+                {field: 'doneTime', title: '催到那一刻', width: 170},
+                {field: 'blockStage', title: '卡环', width: 120},
+                {field: 'blockReason', title: '原委', minWidth: 200},
+                {title: '痕迹', toolbar: '#zero-bar', width: 80, align: 'center'}
+            ]]
+        });
+
+        function reload() {
+            table.reloadData('zero-table');
+        }
+
+        $('#btn-refresh').on('click', reload);
+
+        $('#btn-run').on('click', function () {
+            layer.confirm('按此刻开口跑一轮？够着的每一条都会逐条办到底。', {icon: 3, title: '提示'}, function (index) {
+                layer.close(index);
+                let loading = layer.load();
+                $.ajax({
+                    url: MODULE_PATH + '/run',
+                    type: 'post',
+                    dataType: 'json',
+                    success: function (res) {
+                        layer.close(loading);
+                        if (res.code === 200) {
+                            let d = res.data || {};
+                            layer.alert(res.msg +
+                                '<hr>轮次：' + (d.roundNo || '') +
+                                '<br>还欠开口：' + (d.pendingCount != null ? d.pendingCount : '-') +
+                                '<br>本轮催到：' + (d.doneCount != null ? d.doneCount : '-') +
+                                '<br>催不动：' + (d.failCount != null ? d.failCount : '-') +
+                                (d.frozen ? '<br>（本轮撞保障期封盘，到档单也压住）' : ''),
+                                {icon: 1, title: '本轮收口'});
+                            reload();
+                        } else {
+                            layer.msg(res.msg || '执行失败', {icon: 2});
+                        }
+                    },
+                    error: function () {
+                        layer.close(loading);
+                        layer.msg('执行失败', {icon: 2});
+                    }
+                });
+            });
+        });
+
+        function htmlTable(headers, rows) {
+            let h = '<table class="layui-table" style="margin:10px;"><thead><tr>';
+            headers.forEach(function (x) { h += '<th>' + x + '</th>'; });
+            h += '</tr></thead><tbody>';
+            if (!rows.length) {
+                h += '<tr><td colspan="' + headers.length + '" style="text-align:center;color:#999;">暂无记录</td></tr>';
+            }
+            rows.forEach(function (r) {
+                h += '<tr>';
+                r.forEach(function (x) { h += '<td>' + (x == null ? '' : x) + '</td>'; });
+                h += '</tr>';
+            });
+            return h + '</tbody></table>';
+        }
+
+        $('#btn-rounds').on('click', function () {
+            let loading = layer.load();
+            $.getJSON(MODULE_PATH + '/rounds', function (res) {
+                layer.close(loading);
+                let rows = (res.data || []).map(function (r) {
+                    return [r.roundNo, r.runAt, r.frozen === 1 ? '封盘' : '正常',
+                        r.pickedCount, r.doneCount, r.failCount, r.pendingCount, r.message];
+                });
+                layer.open({
+                    type: 1,
+                    title: '历轮收口（还欠开口/本轮催到/催不动 均回库逐条点出）',
+                    area: ['960px', '560px'],
+                    content: htmlTable(
+                        ['轮次', '开口钟点', '窗口', '捞起', '催到', '催不动', '还欠开口', '收口留言'], rows)
+                });
+            }).fail(function () { layer.close(loading); layer.msg('查询失败', {icon: 2}); });
+        });
+
+        table.on('tool(zero-table)', function (obj) {
+            if (obj.event === 'channels') {
+                let loading = layer.load();
+                $.getJSON(MODULE_PATH + '/channels', {id: obj.data.id}, function (res) {
+                    layer.close(loading);
+                    let rows = (res.data || []).map(function (c) {
+                        return [c.channel === 0 ? '站内（县广电局）' : '手机（台站值机室）',
+                            c.receiver, c.sentAt, c.tplVer,
+                            c.status === 0 ? '已送抵' : '未达'];
+                    });
+                    layer.open({
+                        type: 1,
+                        title: '两路送达痕迹 - ' + obj.data.itemNo + '（站内/手机各算一路，不可顶替）',
+                        area: ['820px', '380px'],
+                        content: htmlTable(['路别', '收方', '送抵那一刻', '稿子版次', '情形'], rows)
+                    });
+                }).fail(function () { layer.close(loading); layer.msg('查询失败', {icon: 2}); });
+            }
+        });
+    });
+</script>
+</html>
